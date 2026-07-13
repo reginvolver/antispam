@@ -23,8 +23,8 @@ class RiskEngineLoadRunner {
     private static final List<String> USER_TEMPLATES = List.of(
             // 1. PASS 正常流量 (占比 70%): 用户ID随 requestSeq 递增，永远无法达到高频限制，判定为 PASS
             "{\"businessType\":\"ECOMMERCE\",\"userId\":\"normal_user_%d\",\"deviceId\":\"dev_normal\",\"ip\":\"192.168.1.1\",\"eventType\":\"LOGIN\"}",
-            // 2. REVIEW 可疑流量 (占比 20%): 固定用户ID为 suspicious_user 使其登录频次递增；设备ID随 requestSeq 递增使其设备数递增，判定为 REVIEW
-            "{\"businessType\":\"ECOMMERCE\",\"userId\":\"suspicious_user\",\"deviceId\":\"dev_suspicious_%d\",\"ip\":\"192.168.2.1\",\"eventType\":\"LOGIN\"}",
+            // 2. REVIEW 可疑流量 (占比 20%): 用户ID在 0-2500 内随机以使频次维持在 5~10 之间，设备ID随 requestSeq 递增使设备数递增，判定为 REVIEW
+            "{\"businessType\":\"ECOMMERCE\",\"userId\":\"suspicious_user_%d\",\"deviceId\":\"dev_suspicious_%d\",\"ip\":\"192.168.2.1\",\"eventType\":\"LOGIN\"}",
             // 3. BLOCK 恶意攻击流量 (占比 10%): 固定用户ID为 hacker_user 使其登录频次快速超过 10，判定为 BLOCK
             "{\"businessType\":\"ECOMMERCE\",\"userId\":\"hacker_user\",\"deviceId\":\"dev_hacker_%d\",\"ip\":\"8.8.8.8\",\"eventType\":\"LOGIN\"}"
     );
@@ -72,7 +72,8 @@ class RiskEngineLoadRunner {
                         if (rand < 70) {
                             body = String.format(USER_TEMPLATES.get(0), requestSeq);
                         } else if (rand < 90) {
-                            body = String.format(USER_TEMPLATES.get(1), requestSeq);
+                            int userIdIndex = ThreadLocalRandom.current().nextInt(2500);
+                            body = String.format(USER_TEMPLATES.get(1), userIdIndex, requestSeq);
                         } else {
                             body = String.format(USER_TEMPLATES.get(2), requestSeq);
                         }
