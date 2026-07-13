@@ -21,12 +21,12 @@ class RiskEngineLoadRunner {
     
     // 模拟不同风险等级用户的请求参数模板
     private static final List<String> USER_TEMPLATES = List.of(
-            // 1. PASS 正常流量 (占比 70%)
+            // 1. PASS 正常流量 (占比 70%): 用户ID随 requestSeq 递增，永远无法达到高频限制，判定为 PASS
             "{\"businessType\":\"ECOMMERCE\",\"userId\":\"normal_user_%d\",\"deviceId\":\"dev_normal\",\"ip\":\"192.168.1.1\",\"eventType\":\"LOGIN\"}",
-            // 2. REVIEW 可疑流量 (占比 20%)
-            "{\"businessType\":\"ECOMMERCE\",\"userId\":\"suspicious_user_%d\",\"deviceId\":\"dev_suspicious\",\"ip\":\"192.168.2.1\",\"eventType\":\"LOGIN\"}",
-            // 3. BLOCK 恶意攻击流量 (占比 10%)
-            "{\"businessType\":\"ECOMMERCE\",\"userId\":\"hacker_user_%d\",\"deviceId\":\"dev_hacker\",\"ip\":\"8.8.8.8\",\"eventType\":\"LOGIN\"}"
+            // 2. REVIEW 可疑流量 (占比 20%): 固定用户ID为 suspicious_user 使其登录频次递增；设备ID随 requestSeq 递增使其设备数递增，判定为 REVIEW
+            "{\"businessType\":\"ECOMMERCE\",\"userId\":\"suspicious_user\",\"deviceId\":\"dev_suspicious_%d\",\"ip\":\"192.168.2.1\",\"eventType\":\"LOGIN\"}",
+            // 3. BLOCK 恶意攻击流量 (占比 10%): 固定用户ID为 hacker_user 使其登录频次快速超过 10，判定为 BLOCK
+            "{\"businessType\":\"ECOMMERCE\",\"userId\":\"hacker_user\",\"deviceId\":\"dev_hacker_%d\",\"ip\":\"8.8.8.8\",\"eventType\":\"LOGIN\"}"
     );
 
     @Test
