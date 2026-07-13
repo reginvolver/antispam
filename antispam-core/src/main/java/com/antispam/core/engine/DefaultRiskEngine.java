@@ -4,6 +4,8 @@ import com.antispam.api.model.*;
 import com.antispam.api.spi.*;
 import com.antispam.core.graph.GraphExecutor;
 import com.antispam.core.registry.FactorRegistry;
+import com.antispam.policy.registry.PolicyRegistry;
+import com.antispam.punishment.executor.PunishmentExecutor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -12,7 +14,6 @@ import java.util.*;
 
 /**
  * RiskEngine 的默认实现，协调 GraphExecutor、PolicyRegistry、PunishmentExecutor。
- * 完整的 PolicyRegistry 和 PunishmentExecutor 注入在后面的 Task 中完成。
  */
 @Slf4j
 @Service
@@ -20,14 +21,20 @@ public class DefaultRiskEngine implements RiskEngine {
 
     private final GraphExecutor graphExecutor;
     private final FactorRegistry factorRegistry;
+    private final PolicyRegistry policyRegistry;
+    private final PunishmentExecutor punishmentExecutor;
     private final long timeoutMs;
 
     public DefaultRiskEngine(
             GraphExecutor graphExecutor,
             FactorRegistry factorRegistry,
+            PolicyRegistry policyRegistry,
+            PunishmentExecutor punishmentExecutor,
             @Value("${antispam.engine.timeout-ms:500}") long timeoutMs) {
         this.graphExecutor = graphExecutor;
         this.factorRegistry = factorRegistry;
+        this.policyRegistry = policyRegistry;
+        this.punishmentExecutor = punishmentExecutor;
         this.timeoutMs = timeoutMs;
     }
 
@@ -36,20 +43,65 @@ public class DefaultRiskEngine implements RiskEngine {
         long start = System.currentTimeMillis();
         Objects.requireNonNull(context, "RiskContext must not be null");
 
-        // 此处仅执行因子计算（Policy 和 Punishment 由后续 Task 接入）
-        List<Factor> allFactors = factorRegistry.getAll();
-        FactorMap factorMap = graphExecutor.execute(allFactors, context, timeoutMs);
+        // 1. 加载此业务种类对应的所有套餐
+        List<PolicyPackage> policies = policyRegistry.getByBusinessType(context.getBusinessType());
+
+        // 2. 收集所有需要的因子（去重）
+        Set<String> requiredFactorIds = new LinkedHashSet<>();
+        policies.forEach(p -> requiredFactorIds.addAll(p.requiredFactors()));
+        List<Factor> factors = factorRegistry.getFactorsByIds(new ArrayList<>(requiredFactorIds));
+
+        // 3. 执行 DAG 因子图
+        boolean timedOut = false;
+        FactorMap factorMap;
+        try {
+            factorMap = graphExecutor.execute(factors, context, timeoutMs);
+        } catch (Exception e) {
+            log.error("[DefaultRiskEngine] Graph execution failed: {}", e.getMessage());
+            factorMap = new FactorMap();
+            timedOut = true;
+        }
+
+        long graphElapsed = System.currentTimeMillis() - start;
+        if (graphElapsed >= timeoutMs) {
+            timedOut = true;
+        }
+
+        // 4. 评估套餐
+        RiskLevel finalLevel = RiskLevel.PASS;
+        List<String> matchedPolicies = new ArrayList<>();
+        List<String> allPunishmentIds = new ArrayList<>();
+
+        for (PolicyPackage policy : policies) {
+            PolicyResult result = policy.evaluate(factorMap);
+            if (result.isMatched()) {
+                matchedPolicies.add(policy.policyId());
+                finalLevel = finalLevel.max(result.getSuggestedLevel());
+                allPunishmentIds.addAll(result.getPunishmentIds());
+                log.info("[DefaultRiskEngine] Policy [{}] matched for userId={}, level={}",
+                        policy.policyId(), context.getUserId(), result.getSuggestedLevel());
+            }
+        }
+
+        // 5. 执行处罚
+        List<PunishmentResult> punishmentResults = Collections.emptyList();
+        if (!allPunishmentIds.isEmpty()) {
+            PunishmentContext punishmentContext = PunishmentContext.builder()
+                    .riskContext(context)
+                    .level(finalLevel)
+                    .build();
+            punishmentResults = punishmentExecutor.execute(allPunishmentIds, punishmentContext);
+        }
 
         long elapsed = System.currentTimeMillis() - start;
-        boolean timedOut = elapsed >= timeoutMs;
 
         return RiskResponse.builder()
-                .level(RiskLevel.PASS)
+                .level(finalLevel)
+                .matchedPolicies(matchedPolicies)
+                .punishments(punishmentResults)
                 .factorValues(factorMap.toValueMap())
                 .elapsedMs(elapsed)
                 .timedOut(timedOut)
-                .matchedPolicies(Collections.emptyList())
-                .punishments(Collections.emptyList())
                 .build();
     }
 }

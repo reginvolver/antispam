@@ -17,6 +17,14 @@
             <artifactId>antispam-api</artifactId>
         </dependency>
         <dependency>
+            <groupId>com.antispam</groupId>
+            <artifactId>antispam-policy</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.antispam</groupId>
+            <artifactId>antispam-punishment</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
         </dependency>
