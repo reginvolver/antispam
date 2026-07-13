@@ -6,14 +6,17 @@ import com.antispam.core.graph.GraphExecutor;
 import com.antispam.core.registry.FactorRegistry;
 import com.antispam.policy.registry.PolicyRegistry;
 import com.antispam.punishment.executor.PunishmentExecutor;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 /**
- * RiskEngine 的默认实现，协调 GraphExecutor、PolicyRegistry、PunishmentExecutor。
+ * RiskEngine 的默认实现，协调 GraphExecutor、PolicyRegistry、PunishmentExecutor 并埋点监控指标。
  */
 @Slf4j
 @Service
@@ -23,6 +26,7 @@ public class DefaultRiskEngine implements RiskEngine {
     private final FactorRegistry factorRegistry;
     private final PolicyRegistry policyRegistry;
     private final PunishmentExecutor punishmentExecutor;
+    private final MeterRegistry meterRegistry;
     private final long timeoutMs;
 
     public DefaultRiskEngine(
@@ -30,11 +34,13 @@ public class DefaultRiskEngine implements RiskEngine {
             FactorRegistry factorRegistry,
             PolicyRegistry policyRegistry,
             PunishmentExecutor punishmentExecutor,
+            MeterRegistry meterRegistry,
             @Value("${antispam.engine.timeout-ms:500}") long timeoutMs) {
         this.graphExecutor = graphExecutor;
         this.factorRegistry = factorRegistry;
         this.policyRegistry = policyRegistry;
         this.punishmentExecutor = punishmentExecutor;
+        this.meterRegistry = meterRegistry;
         this.timeoutMs = timeoutMs;
     }
 
@@ -55,7 +61,16 @@ public class DefaultRiskEngine implements RiskEngine {
         boolean timedOut = false;
         FactorMap factorMap;
         try {
+            long graphStart = System.nanoTime();
             factorMap = graphExecutor.execute(factors, context, timeoutMs);
+            long graphDuration = System.nanoTime() - graphStart;
+            
+            // 埋点 DAG 运行期延时
+            Timer.builder("antispam.graph.execute.latency")
+                    .description("Latency of DAG execution")
+                    .tag("businessType", context.getBusinessType())
+                    .register(meterRegistry)
+                    .record(graphDuration, TimeUnit.NANOSECONDS);
         } catch (Exception e) {
             log.error("[DefaultRiskEngine] Graph execution failed: {}", e.getMessage());
             factorMap = new FactorMap();
@@ -94,6 +109,19 @@ public class DefaultRiskEngine implements RiskEngine {
         }
 
         long elapsed = System.currentTimeMillis() - start;
+
+        // 埋点风控系统统计指标 (Counter + Timer)
+        meterRegistry.counter("antispam.risk.requests",
+                "businessType", context.getBusinessType(),
+                "level", finalLevel.name(),
+                "timedOut", String.valueOf(timedOut)
+        ).increment();
+
+        Timer.builder("antispam.risk.latency")
+                .description("Total risk evaluation latency")
+                .tag("businessType", context.getBusinessType())
+                .register(meterRegistry)
+                .record(elapsed, TimeUnit.MILLISECONDS);
 
         return RiskResponse.builder()
                 .level(finalLevel)

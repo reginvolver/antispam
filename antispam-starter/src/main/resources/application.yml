@@ -36,3 +36,12 @@ antispam:
 logging:
   level:
     com.antispam: INFO
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: prometheus,health,info
+  metrics:
+    tags:
+      application: ${spring.application.name}
