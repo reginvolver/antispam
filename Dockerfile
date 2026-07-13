@@ -1,5 +1,5 @@
 # Stage 1: Build project
-FROM maven:3.9.6-eclipse-temurin-17 AS builder
+FROM public.ecr.aws/docker/library/maven:3.9.6-eclipse-temurin-17 AS builder
 WORKDIR /build
 
 # Copy Maven settings first for mirror speedup in China
@@ -23,7 +23,7 @@ COPY . .
 RUN mvn clean package -DskipTests -B
 
 # Stage 2: Runtime JRE
-FROM eclipse-temurin:17-jre
+FROM public.ecr.aws/docker/library/eclipse-temurin:17-jre
 WORKDIR /app
 
 # Copy the built jar to runtime image
