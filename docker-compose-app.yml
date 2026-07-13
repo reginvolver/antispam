@@ -79,7 +79,7 @@ services:
     volumes:
       - ./docker/grafana/provisioning:/etc/grafana/provisioning
     ports:
-      - "3000:3000"
+      - "3001:3000"
     depends_on:
       - prometheus
     restart: unless-stopped
