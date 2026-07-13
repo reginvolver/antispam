@@ -61,5 +61,27 @@ services:
       - mysql
     restart: unless-stopped
 
+  prometheus:
+    image: prom/prometheus:v2.45.0
+    container_name: antispam-prometheus
+    volumes:
+      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    depends_on:
+      - antispam-engine
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:10.0.0
+    container_name: antispam-grafana
+    volumes:
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
 volumes:
   mysql_data:
