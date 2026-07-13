@@ -1,6 +1,6 @@
 # Antispam Risk Engine (实时风控引擎框架)
 
-[![Java CI with Maven](https://github.com/your-username/antispam/actions/workflows/maven.yml/badge.svg)](https://github.com/your-username/antispam/actions/workflows/maven.yml)
+[![Java CI with Maven](https://github.com/reginvolver/antispam/actions/workflows/maven.yml/badge.svg)](https://github.com/reginvolver/antispam/actions/workflows/maven.yml)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 Antispam 是一个基于事件驱动 DAG (有向无环图) 并行计算架构的高性能实时风控引擎框架。它旨在解决互联网高并发场景下的账户登录、注册、支付等关键业务场景的防刷、防撞库以及欺诈行为识别需求。
