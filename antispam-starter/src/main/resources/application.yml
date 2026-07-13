@@ -5,20 +5,20 @@ spring:
   application:
     name: antispam-engine
   datasource:
-    url: jdbc:mysql://localhost:3306/antispam?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
-    username: root
-    password: password
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/antispam?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai}
+    username: ${SPRING_DATASOURCE_USERNAME:root}
+    password: ${SPRING_DATASOURCE_PASSWORD:password}
     driver-class-name: com.mysql.cj.jdbc.Driver
   data:
     redis:
-      host: localhost
-      port: 6379
+      host: ${SPRING_DATA_REDIS_HOST:localhost}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
       lettuce:
         pool:
           max-active: 20
           max-idle: 10
   kafka:
-    bootstrap-servers: localhost:9092
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
@@ -27,7 +27,7 @@ spring:
 
 antispam:
   engine:
-    timeout-ms: 200
+    timeout-ms: ${ANTISPAM_ENGINE_TIMEOUT_MS:200}
     thread-pool:
       core-size: 20
       max-size: 50
