@@ -58,6 +58,17 @@
           "legendFormat": "拦截 (BLOCK) QPS",
           "range": true,
           "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "Prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(antispam_risk_requests_total{level=\"REVIEW\"}[10s]))",
+          "legendFormat": "审核 (REVIEW) QPS",
+          "range": true,
+          "refId": "C"
         }
       ],
       "fieldConfig": {
