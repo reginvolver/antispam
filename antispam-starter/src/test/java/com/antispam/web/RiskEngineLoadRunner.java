@@ -42,7 +42,6 @@ class RiskEngineLoadRunner {
 
         HttpClient httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(2))
-                .executor(executor)
                 .build();
 
         AtomicLong successCount = new AtomicLong(0);
