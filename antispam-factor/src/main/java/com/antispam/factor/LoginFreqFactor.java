@@ -40,6 +40,9 @@ public class LoginFreqFactor implements Factor {
         long now = ctx.getTimestamp();
         long windowStart = now - WINDOW_MS;
 
+        // 记录当前登录事件到 Redis 滑动窗口中 (TTL 设为窗口时间的两倍：120秒)
+        redisWindowCounter.addEvent(key, now, (WINDOW_MS / 1000) * 2);
+
         long count = redisWindowCounter.count(key, windowStart, now);
         return FactorResult.success(count);
     }

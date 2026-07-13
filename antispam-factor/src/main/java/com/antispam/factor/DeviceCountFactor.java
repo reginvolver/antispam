@@ -35,6 +35,12 @@ public class DeviceCountFactor implements Factor {
     @Override
     public FactorResult compute(RiskContext ctx, FactorMap upstream) {
         String key = RedisKeyHelper.deviceCountKey(ctx.getUserId());
+        
+        // 记录当前设备ID到 Redis Set 中 (TTL 设为 24 小时)
+        if (ctx.getDeviceId() != null && !ctx.getDeviceId().isEmpty()) {
+            redisWindowCounter.addToSet(key, ctx.getDeviceId(), 24 * 3600);
+        }
+
         long count = redisWindowCounter.countSet(key);
         return FactorResult.success(count);
     }
