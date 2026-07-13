@@ -2,6 +2,9 @@
 FROM maven:3.9.6-eclipse-temurin-17 AS builder
 WORKDIR /build
 
+# Copy Maven settings first for mirror speedup in China
+COPY docker/maven/settings.xml /root/.m2/settings.xml
+
 # Copy Maven descriptor files and source files
 COPY pom.xml .
 COPY antispam-api/pom.xml antispam-api/
@@ -12,7 +15,7 @@ COPY antispam-policy/pom.xml antispam-policy/
 COPY antispam-punishment/pom.xml antispam-punishment/
 COPY antispam-starter/pom.xml antispam-starter/
 
-# Download dependencies offline to cache them
+# Download dependencies offline to cache them using the mirror
 RUN mvn dependency:go-offline -B -pl antispam-starter -am
 
 # Copy source code and build project
