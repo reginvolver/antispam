@@ -1,0 +1,10 @@
+target/
+*.class
+*.log
+.idea/
+*.iml
+.vscode/
+.DS_Store
+.superpowers/sdd/task-*-brief.md
+.superpowers/sdd/task-*-report.md
+.superpowers/sdd/review-package-*
